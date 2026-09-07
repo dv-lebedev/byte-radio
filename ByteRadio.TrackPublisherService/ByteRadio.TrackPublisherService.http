@@ -1,0 +1,6 @@
+@ByteRadio.TrackPublisherService_HostAddress = http://localhost:5113
+
+GET {{ByteRadio.TrackPublisherService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
