@@ -25,8 +25,9 @@ public sealed class AudioBroadcaster : IAsyncDisposable
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _cts;
     private Task? _sendLoopTask;
-    private Task? _resampleLoopTask;
+    private Task? _converterLoopTask;
     private long _totalBytesSent;
+    private PcmToMp3Converter? _pcmToMp3Converter;
 
     public bool IsRunning { get; private set; }
 
@@ -34,8 +35,6 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<Exception>? ErrorOccurred;
-
-    private Resampler? _resampler;
 
     public AudioBroadcaster(ILoggerFactory loggerFactory)
     {
@@ -77,8 +76,8 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         _capture.DataAvailable += OnDataAvailable;
         _capture.RecordingStopped += OnRecordingStopped;
 
-        _resampler = new Resampler(_capture.WaveFormat, WaveFormat.CreateIeeeFloatWaveFormat(32000, 2), _loggerFactory.CreateLogger<Resampler>());
-        _resampleLoopTask = Task.Run(() => ResampleLoopAsync(ct), ct);
+        _pcmToMp3Converter = new PcmToMp3Converter(_capture.WaveFormat, _loggerFactory.CreateLogger<PcmToMp3Converter>());
+        _converterLoopTask = Task.Run(() => ConverterLoopAsync(ct), ct);
 
         _capture.StartRecording();
 
@@ -101,11 +100,11 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         _cts?.Cancel();
 
-        if (_resampleLoopTask is not null)
+        if (_converterLoopTask is not null)
         {
             try
             {
-                await _resampleLoopTask;
+                await _converterLoopTask;
             }
             catch (OperationCanceledException)
             {
@@ -139,13 +138,13 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         CleanUpCapture();
 
-        _resampler?.Dispose();
-        _resampler = null;
+        _pcmToMp3Converter?.Dispose();
+        _pcmToMp3Converter = null;
 
         _webSocket?.Dispose();
         _webSocket = null;
 
-        _resampleLoopTask = null;
+        _converterLoopTask = null;
 
         _cts?.Dispose();
         _cts = null;
@@ -182,20 +181,19 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         _rawQueue.Writer.TryWrite(buffer);
     }
 
-    private async Task ResampleLoopAsync(CancellationToken cancellationToken)
+    private async Task ConverterLoopAsync(CancellationToken cancellationToken)
     {
         try
         {
             await foreach (var buffer in _rawQueue.Reader.ReadAllAsync(cancellationToken))
             {
-                //TODO: resampling needs more work
-                //var data = _resampler?.ResampleRawPcmData(buffer) ?? buffer;
-                //if (data.Length == 0)
-                //{
-                //    continue;
-                //}
+                var data = _pcmToMp3Converter?.Convert(buffer) ?? Array.Empty<byte>();
+                if (data.Length == 0)
+                {
+                    continue;
+                }
 
-                _sendQueue.Writer.TryWrite(buffer);
+                _sendQueue.Writer.TryWrite(data);
             }
         }
         catch (OperationCanceledException)
