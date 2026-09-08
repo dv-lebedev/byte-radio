@@ -48,9 +48,12 @@ public class Program
         builder.Services.AddControllers();
         builder.Services.AddProblemDetails();
 
-        builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
         builder.Services.AddSingleton<WebSocketConnectionManager>();
         builder.Services.AddSingleton<IMessageBroadcaster>(sp => sp.GetRequiredService<WebSocketConnectionManager>());
+
+        builder.Services.AddSingleton<LocalTestRabbitMqOptionsProvider>();
+        builder.Services.AddSingleton<IRabbitMqOptionsProvider>(sp => sp.GetRequiredService<LocalTestRabbitMqOptionsProvider>());
+
         builder.Services.AddHostedService<RabbitMqConsumerService>();
 
         builder.Services.AddCors(options =>

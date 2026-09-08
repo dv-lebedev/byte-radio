@@ -42,7 +42,8 @@ public class Program
         builder.Services.AddSingleton<LiveStreamSourceManager>();
         //builder.Services.AddTransient<ISensorDataRepository, SensorDataRepository>();
 
-        builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
+        builder.Services.AddSingleton<LocalTestRabbitMqOptionsProvider>();
+        builder.Services.AddSingleton<IRabbitMqOptionsProvider>(sp => sp.GetRequiredService<LocalTestRabbitMqOptionsProvider>());
         builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 
         builder.Services.AddHealthChecks()

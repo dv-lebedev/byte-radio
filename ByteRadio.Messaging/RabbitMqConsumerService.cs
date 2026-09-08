@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -8,19 +7,20 @@ namespace ByteRadio.Messaging;
 
 public sealed class RabbitMqConsumerService : BackgroundService
 {
-    private readonly RabbitMqOptions _options;
+    private readonly IRabbitMqOptionsProvider _optionsProvider;
     private readonly IMessageBroadcaster _broadcaster;
     private readonly ILogger<RabbitMqConsumerService> _logger;
 
+    private RabbitMqOptions? _options;
     private IConnection? _connection;
     private IChannel? _channel;
 
     public RabbitMqConsumerService(
-        IOptions<RabbitMqOptions> options,
+        IRabbitMqOptionsProvider optionsProvider,
         IMessageBroadcaster broadcaster,
         ILogger<RabbitMqConsumerService> logger)
     {
-        _options = options.Value;
+        _optionsProvider = optionsProvider;
         _broadcaster = broadcaster;
         _logger = logger;
     }
@@ -61,6 +61,8 @@ public sealed class RabbitMqConsumerService : BackgroundService
 
     private async Task ConnectAndConsumeAsync(CancellationToken stoppingToken)
     {
+        _options = await _optionsProvider.RequestOptions();
+
         var factory = new ConnectionFactory
         {
             HostName = _options.HostName,
