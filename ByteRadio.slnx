@@ -5,6 +5,6 @@
   <Project Path="ByteRadio.Broadcast/ByteRadio.Broadcast.csproj" />
   <Project Path="ByteRadio.Messaging/ByteRadio.Messaging.csproj" />
   <Project Path="ByteRadio.StreamingGatewayService/ByteRadio.StreamingGatewayService.csproj" />
-  <Project Path="ByteRadio.TrackPublisherService/ByteRadio.LiveStreamIngestService.csproj" />
+  <Project Path="ByteRadio.LiveStreamIngestService/ByteRadio.LiveStreamIngestService.csproj" />
 </Solution>
 

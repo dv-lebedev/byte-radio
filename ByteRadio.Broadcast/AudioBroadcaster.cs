@@ -187,13 +187,14 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         {
             await foreach (var buffer in _rawQueue.Reader.ReadAllAsync(cancellationToken))
             {
-                var data = _resampler?.ResampleRawPcmData(buffer) ?? buffer;
-                if (data.Length == 0)
-                {
-                    continue;
-                }
+                //TODO: resampling needs more work
+                //var data = _resampler?.ResampleRawPcmData(buffer) ?? buffer;
+                //if (data.Length == 0)
+                //{
+                //    continue;
+                //}
 
-                _sendQueue.Writer.TryWrite(data);
+                _sendQueue.Writer.TryWrite(buffer);
             }
         }
         catch (OperationCanceledException)
