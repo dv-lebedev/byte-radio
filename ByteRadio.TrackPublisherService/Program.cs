@@ -1,4 +1,4 @@
-using ByteRadio.LiveStreamIngestService.Messaging;
+using ByteRadio.Messaging;
 using ByteRadio.TrackPublisherService.Controllers;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;

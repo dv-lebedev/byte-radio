@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using Serilog;
 
-namespace ByteRadio.LiveStreamIngestService.Messaging;
+namespace ByteRadio.Messaging;
 
 public sealed class RabbitMqPublisher : IRabbitMqPublisher, IAsyncDisposable
 {

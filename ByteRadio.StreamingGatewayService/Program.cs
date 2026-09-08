@@ -1,7 +1,5 @@
-using ByteRadio.StreamingGatewayService;
-using ByteRadio.StreamingGatewayService.Messaging;
+using ByteRadio.Messaging;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
 using Serilog;
@@ -52,6 +50,7 @@ public class Program
 
         builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
         builder.Services.AddSingleton<WebSocketConnectionManager>();
+        builder.Services.AddSingleton<IMessageBroadcaster>(sp => sp.GetRequiredService<WebSocketConnectionManager>());
         builder.Services.AddHostedService<RabbitMqConsumerService>();
 
         builder.Services.AddCors(options =>
@@ -138,4 +137,3 @@ public class Program
         Log.CloseAndFlush();
     }
 }
-

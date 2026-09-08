@@ -1,4 +1,4 @@
-namespace ByteRadio.LiveStreamIngestService.Messaging;
+namespace ByteRadio.Messaging;
 
 public class RabbitMqOptions
 {

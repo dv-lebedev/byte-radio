@@ -1,4 +1,4 @@
-﻿using ByteRadio.LiveStreamIngestService.Messaging;
+﻿using ByteRadio.Messaging;
 using System.Net.WebSockets;
 using System.Threading.Channels;
 

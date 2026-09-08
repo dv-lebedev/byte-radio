@@ -1,9 +1,10 @@
+using ByteRadio.Messaging;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 
 namespace ByteRadio.StreamingGatewayService;
 
-public class WebSocketConnectionManager
+public class WebSocketConnectionManager : IMessageBroadcaster
 {
     private readonly ConcurrentDictionary<Guid, WebSocket> _sockets = new();
     private readonly ILogger<WebSocketConnectionManager> _logger;

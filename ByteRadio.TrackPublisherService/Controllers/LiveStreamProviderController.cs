@@ -14,19 +14,17 @@ namespace ByteRadio.TrackPublisherService.Controllers
         [HttpGet("connect")]
         public async Task<IActionResult> ConnectLiveStreamSource()
         {
-            Log.Debug("Received request to connect live stream source from {RemoteIpAddress}", HttpContext.Connection.RemoteIpAddress);
-
-            if (HttpContext.WebSockets.IsWebSocketRequest)
-            {
-                using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                var logger = Log.ForContext("ForConnection", Guid.NewGuid());
-                await _streamSourceManager.HandleLiveStreamSourceAsync(webSocket, logger);
-                return Ok();
-            }
-            else
+            if (!HttpContext.WebSockets.IsWebSocketRequest)
             {
                 return BadRequest("WebSocket request expected.");
             }
+
+            Log.Debug("Received request to connect live stream source from {RemoteIpAddress}", HttpContext.Connection.RemoteIpAddress);
+
+            using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            var logger = Log.ForContext("ForConnection", Guid.NewGuid());
+            await _streamSourceManager.HandleLiveStreamSourceAsync(webSocket, logger);
+            return Ok();
         }
     }
 }

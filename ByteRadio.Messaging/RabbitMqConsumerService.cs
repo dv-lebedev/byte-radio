@@ -1,14 +1,15 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using Serilog;
 
-namespace ByteRadio.StreamingGatewayService.Messaging;
+namespace ByteRadio.Messaging;
 
 public sealed class RabbitMqConsumerService : BackgroundService
 {
     private readonly RabbitMqOptions _options;
-    private readonly WebSocketConnectionManager _connectionManager;
+    private readonly IMessageBroadcaster _broadcaster;
     private readonly ILogger<RabbitMqConsumerService> _logger;
 
     private IConnection? _connection;
@@ -16,11 +17,11 @@ public sealed class RabbitMqConsumerService : BackgroundService
 
     public RabbitMqConsumerService(
         IOptions<RabbitMqOptions> options,
-        WebSocketConnectionManager connectionManager,
+        IMessageBroadcaster broadcaster,
         ILogger<RabbitMqConsumerService> logger)
     {
         _options = options.Value;
-        _connectionManager = connectionManager;
+        _broadcaster = broadcaster;
         _logger = logger;
     }
 
@@ -87,7 +88,7 @@ public sealed class RabbitMqConsumerService : BackgroundService
 
                 //TODO Serilog.Log.Debug("Received message from RabbitMQ queue {QueueName}: {MessageSize} bytes", _options.QueueName, data.Length);
 
-                await _connectionManager.BroadcastAsync(data, stoppingToken);
+                await _broadcaster.BroadcastAsync(data, stoppingToken);
                 //await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
             }
             catch (Exception ex)
