@@ -1,5 +1,5 @@
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
-using Serilog;
 
 namespace ByteRadio.Messaging;
 
@@ -7,7 +7,7 @@ public sealed class RabbitMqPublisher : IRabbitMqPublisher, IAsyncDisposable
 {
     private readonly IRabbitMqOptionsProvider _optionsProvider;
     private RabbitMqOptions? _options;
-    private readonly Serilog.ILogger _logger = Log.ForContext<RabbitMqPublisher>();
+    private readonly ILogger<RabbitMqPublisher> _logger;
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
     private IConnection? _connection;
@@ -17,9 +17,10 @@ public sealed class RabbitMqPublisher : IRabbitMqPublisher, IAsyncDisposable
         Persistent = true
     };
 
-    public RabbitMqPublisher(IRabbitMqOptionsProvider optionsProvider)
+    public RabbitMqPublisher(IRabbitMqOptionsProvider optionsProvider, ILogger<RabbitMqPublisher> logger)
     {
         _optionsProvider = optionsProvider;
+        _logger = logger;
         _ = GetOrCreateChannelAsync(CancellationToken.None);
     }
 
@@ -71,7 +72,7 @@ public sealed class RabbitMqPublisher : IRabbitMqPublisher, IAsyncDisposable
                 autoDelete: false,
                 cancellationToken: cancellationToken);
 
-            _logger.Information("RabbitMQ channel established for queue {QueueName}.", _options.QueueName);
+            _logger.LogInformation("RabbitMQ channel established for queue {QueueName}.", _options.QueueName);
 
             return _channel;
         }

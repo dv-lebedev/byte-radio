@@ -33,6 +33,8 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        builder.Host.UseSerilog();
+
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.ConfigureEndpointDefaults(listenOptions =>

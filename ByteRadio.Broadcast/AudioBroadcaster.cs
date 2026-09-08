@@ -1,5 +1,5 @@
+using Microsoft.Extensions.Logging;
 using NAudio.Wave;
-using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Channels;
 
@@ -7,7 +7,15 @@ namespace ByteRadio.Broadcast;
 
 public sealed class AudioBroadcaster : IAsyncDisposable
 {
-    private readonly Channel<byte[]> _sendQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
+    private readonly ILoggerFactory _loggerFactory;
+
+    private Channel<byte[]> _rawQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
+    {
+        SingleReader = true,
+        SingleWriter = true
+    });
+
+    private Channel<byte[]> _sendQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
     {
         SingleReader = true,
         SingleWriter = true
@@ -17,13 +25,22 @@ public sealed class AudioBroadcaster : IAsyncDisposable
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _cts;
     private Task? _sendLoopTask;
+    private Task? _resampleLoopTask;
+    private long _totalBytesSent;
 
     public bool IsRunning { get; private set; }
+
+    public long TotalBytesSent => Interlocked.Read(ref _totalBytesSent);
 
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<Exception>? ErrorOccurred;
 
-    private Resampler _resampler;
+    private Resampler? _resampler;
+
+    public AudioBroadcaster(ILoggerFactory loggerFactory)
+    {
+        _loggerFactory = loggerFactory;
+    }
 
     public async Task StartAsync(string webSocketUrl, CancellationToken cancellationToken = default)
     {
@@ -34,6 +51,18 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
+        Interlocked.Exchange(ref _totalBytesSent, 0);
+
+        _rawQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = true
+        });
+        _sendQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = true
+        });
 
         _webSocket = new ClientWebSocket();
 
@@ -46,9 +75,11 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         _capture = new WasapiLoopbackCapture();
         _capture.DataAvailable += OnDataAvailable;
         _capture.RecordingStopped += OnRecordingStopped;
-        _capture.StartRecording();
 
-        _resampler = new Resampler(_capture.WaveFormat, new WaveFormat(44100, 16, 2));
+        _resampler = new Resampler(_capture.WaveFormat, WaveFormat.CreateIeeeFloatWaveFormat(32000, 2), _loggerFactory.CreateLogger<Resampler>());
+        _resampleLoopTask = Task.Run(() => ResampleLoopAsync(ct), ct);
+
+        _capture.StartRecording();
 
         IsRunning = true;
         RaiseStatus("Capturing system audio");
@@ -65,7 +96,21 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         _capture?.StopRecording();
 
+        _rawQueue.Writer.TryComplete();
+
         _cts?.Cancel();
+
+        if (_resampleLoopTask is not null)
+        {
+            try
+            {
+                await _resampleLoopTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // expected on stop
+            }
+        }
 
         if (_sendLoopTask is not null)
         {
@@ -93,8 +138,13 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         CleanUpCapture();
 
+        _resampler?.Dispose();
+        _resampler = null;
+
         _webSocket?.Dispose();
         _webSocket = null;
+
+        _resampleLoopTask = null;
 
         _cts?.Dispose();
         _cts = null;
@@ -122,12 +172,38 @@ public sealed class AudioBroadcaster : IAsyncDisposable
             return;
         }
 
+        // Keep this callback as cheap as possible: WASAPI loopback capture runs it on a
+        // real-time audio thread, and any heavy work here (like resampling) causes the
+        // internal capture buffer to overrun, which is heard as crackling/glitches.
         var buffer = new byte[e.BytesRecorded];
         Buffer.BlockCopy(e.Buffer, 0, buffer, 0, e.BytesRecorded);
 
-        //var data = _resampler.ResampleRawPcmData(buffer, _capture.WaveFormat.Channels);
+        _rawQueue.Writer.TryWrite(buffer);
+    }
 
-        _sendQueue.Writer.TryWrite(buffer);
+    private async Task ResampleLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var buffer in _rawQueue.Reader.ReadAllAsync(cancellationToken))
+            {
+                var data = _resampler?.ResampleRawPcmData(buffer) ?? buffer;
+                if (data.Length == 0)
+                {
+                    continue;
+                }
+
+                _sendQueue.Writer.TryWrite(data);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // expected on stop
+        }
+        finally
+        {
+            _sendQueue.Writer.TryComplete();
+        }
     }
 
     private void OnRecordingStopped(object? sender, StoppedEventArgs e)
@@ -156,6 +232,8 @@ public sealed class AudioBroadcaster : IAsyncDisposable
                         WebSocketMessageType.Binary,
                         endOfMessage: true,
                         cancellationToken);
+
+                    Interlocked.Add(ref _totalBytesSent, buffer.Length);
                 }
                 catch (Exception ex)
                 {

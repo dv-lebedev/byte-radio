@@ -15,7 +15,7 @@ public class LiveStreamSourceManager
         _publisher = publisher;
     }
 
-    public async Task HandleLiveStreamSourceAsync(WebSocket webSocket, Serilog.ILogger log)
+    public async Task HandleLiveStreamSourceAsync(WebSocket webSocket, ILogger log)
     {
         var newItem = new LiveStreamSourceItem(webSocket, log, _publisher);
         LiveStreamSourceItem? oldItem;
@@ -35,14 +35,14 @@ public class LiveStreamSourceManager
 public class LiveStreamSourceItem : IDisposable
 {
     private readonly WebSocket _webSocket;
-    private readonly Serilog.ILogger _logger;
+    private readonly ILogger _logger;
     private readonly IRabbitMqPublisher _publisher;
     private readonly CancellationTokenSource _cts;
     private readonly CancellationToken _ct;
     private int _disposed;
     private readonly Channel<byte[]> _channel;   
 
-    public LiveStreamSourceItem(WebSocket webSocket, Serilog.ILogger logger, IRabbitMqPublisher publisher)
+    public LiveStreamSourceItem(WebSocket webSocket, ILogger logger, IRabbitMqPublisher publisher)
     {
         _webSocket = webSocket;
         _logger = logger;
@@ -67,7 +67,7 @@ public class LiveStreamSourceItem : IDisposable
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error occurred while reading from the channel.");
+                _logger.LogError(ex, "Error occurred while reading from the channel.");
             }
         });
 
@@ -107,7 +107,7 @@ public class LiveStreamSourceItem : IDisposable
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
                     var text = System.Text.Encoding.UTF8.GetString(data);
-                    _logger.Debug("Received live stream source text message: {Message}", text);
+                    _logger.LogDebug("Received live stream source text message: {Message}", text);
                 }
                 else if (result.MessageType == WebSocketMessageType.Binary && data is not null)
                 {
@@ -117,11 +117,11 @@ public class LiveStreamSourceItem : IDisposable
         }
         catch (OperationCanceledException)
         {
-            _logger.Debug("Live stream source item run loop canceled.");
+            _logger.LogDebug("Live stream source item run loop canceled.");
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Live stream source item run loop encountered an error.");
+            _logger.LogError(ex, "Live stream source item run loop encountered an error.");
         }
         finally
         {
@@ -130,7 +130,7 @@ public class LiveStreamSourceItem : IDisposable
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
             }
             _webSocket.Dispose();
-            _logger.Debug("Live stream source item run loop finished.");
+            _logger.LogDebug("Live stream source item run loop finished.");
         }
     }
 

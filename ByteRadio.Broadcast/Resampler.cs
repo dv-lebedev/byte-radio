@@ -1,210 +1,115 @@
 ﻿
+using Microsoft.Extensions.Logging;
+using NAudio.MediaFoundation;
 using NAudio.Wave;
-using NAudio.Wave.Compression;
-using Serilog;
+using System.IO;
 
 namespace ByteRadio.Broadcast;
 
-public class Resampler
+public class Resampler : IDisposable
 {
-    private readonly Dictionary<int, AcmStream> _captureDevicesResamplers = [];
-    private readonly Dictionary<int, byte[]> _notResampledHeadChunks = [];
+    private static readonly object StartupLock = new();
+    private static bool _mediaFoundationStarted;
 
-    public WaveFormat SourceWaveFormat { get; private set; }
-    public WaveFormat DestinationWaveFormat { get; private set; }
+    private readonly WaveFormat _inputFormat;
+    private readonly WaveFormat _outputFormat;
+    private readonly ILogger<Resampler> _logger;
+    private readonly bool _passthrough;
 
-    public Resampler(WaveFormat sourceWaveFormat, WaveFormat destinationWaveFormat)
+    private BufferedWaveProvider? _sourceProvider;
+    private MediaFoundationResampler? _resampler;
+    private bool _disposed;
+
+    public Resampler(WaveFormat input, WaveFormat output, ILogger<Resampler> logger)
     {
-        SourceWaveFormat = sourceWaveFormat;
-        DestinationWaveFormat = destinationWaveFormat;        
+        _inputFormat = input;
+        _outputFormat = output;
+        _logger = logger;
+        _passthrough = input.Equals(output);
     }
 
-    public byte[] ResampleRawPcmData(byte[] input, int channel)
+    internal byte[] ResampleRawPcmData(byte[] buffer)
     {
-        if (SourceWaveFormat.Equals(DestinationWaveFormat))
+        if (_passthrough || buffer.Length == 0)
         {
-            return input;
+            return buffer;
         }
 
-        // https://markheath.net/post/input-driven-resampling-with-naudio-using-acm
-        int resampledBytes = 0;
-        int sourceBytesConverted = 0;
-
-        byte[]? sourceBa = null;
-        if (!_notResampledHeadChunks.TryGetValue(channel, out byte[] headBa))
-            sourceBa = input;
-        else
-        {
-            sourceBa = new byte[headBa.Length + input.Length];
-            Buffer.BlockCopy(headBa, 0, sourceBa, 0, headBa.Length);
-            Buffer.BlockCopy(input, 0, sourceBa, headBa.Length, input.Length);
-            _notResampledHeadChunks.Remove(channel);
-        }
-
-        var sourceLength = sourceBa.Length;
-
-        AcmStream _acmStream = null;
         try
         {
-            if (!_captureDevicesResamplers.TryGetValue(channel, out _acmStream))
+            var (sourceProvider, resampler) = GetOrCreateResampler();
+
+            sourceProvider.AddSamples(buffer, 0, buffer.Length);
+
+            using var output = new MemoryStream();
+            var readBuffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = resampler.Read(readBuffer.AsSpan())) > 0)
             {
-                _acmStream = new AcmStream(SourceWaveFormat, DestinationWaveFormat);
-                Log.Debug("Created AcmStream with src: {src} and dst: {dst} for channel: {channel}",
-                    SourceWaveFormat, DestinationWaveFormat, channel);
-                _captureDevicesResamplers.Add(channel, _acmStream);
+                output.Write(readBuffer, 0, bytesRead);
             }
 
-
-            var startIndex = 0;
-            int bytesToProcess = _acmStream.SourceBuffer.Length;
-
-
-            double srcDstRatio = (double)Math.Max(DestinationWaveFormat.SampleRate, SourceWaveFormat.SampleRate) /
-                Math.Min(DestinationWaveFormat.SampleRate, SourceWaveFormat.SampleRate);
-            var destBufferLength = sourceBa.Length * srcDstRatio + 100; //extra 100bytes will be enough
-            byte[] destBuffer = new byte[(int)destBufferLength];
-            var totalBytesResampled = 0;
-            while (sourceBa.Length - startIndex >= bytesToProcess)
-            {
-                ResampleChunk(channel, sourceBa, startIndex, bytesToProcess, destBuffer, out resampledBytes, out sourceBytesConverted);
-                startIndex += sourceBytesConverted;
-
-                Buffer.BlockCopy(_acmStream.DestBuffer, 0, destBuffer, totalBytesResampled, resampledBytes);
-                totalBytesResampled += resampledBytes;
-
-            }
-            if (startIndex < sourceBa.Length)
-            {
-                bytesToProcess = sourceBa.Length - startIndex;
-                ResampleChunk(channel, sourceBa, startIndex, bytesToProcess, destBuffer, out resampledBytes, out sourceBytesConverted);
-                startIndex += sourceBytesConverted;
-
-                Buffer.BlockCopy(_acmStream.DestBuffer, 0, destBuffer, totalBytesResampled, resampledBytes);
-                totalBytesResampled += resampledBytes;
-            }
-
-            return destBuffer.Length > totalBytesResampled
-                    ? destBuffer[..totalBytesResampled]
-                    : destBuffer;
+            return output.ToArray();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            // Source length: 132960, SourceBufferLength: 96000 convertedBytes:0
-            Log.Error(e, "Source length: {sourceLength}, SourceBufferLength: {sourceBufferLength} sourceBytesConverted: {sourceBytesConverted} convertedBytes:{convertedBytes}",
-                sourceBa.Length, _acmStream?.SourceBuffer.Length, sourceBytesConverted, resampledBytes);
-        }
-        return null;
-    }
-
-    public void DisposeResamplers()
-    {
-        foreach (var pair in _captureDevicesResamplers)
-        {
-            var acmStream = pair.Value;
-            acmStream.Dispose();
+            _logger.LogError(ex, "Error resampling PCM data. Source length: {sourceLength}", buffer.Length);
+            return [];
         }
     }
 
-    private void ResampleChunk(int channel, byte[] source, int startIndex, int bytesToProcess, byte[] destBuffer, out int resampledBytes, out int sourceBytesConverted)
+    private (BufferedWaveProvider Source, MediaFoundationResampler Resampler) GetOrCreateResampler()
     {
-        AcmStream _acmStream = _captureDevicesResamplers[channel];
-        Buffer.BlockCopy(source, startIndex, _acmStream.SourceBuffer, 0, bytesToProcess);
-
-        resampledBytes = _acmStream.Convert(bytesToProcess, out sourceBytesConverted);
-        if (sourceBytesConverted != bytesToProcess)
+        if (_resampler is null || _sourceProvider is null)
         {
-            var notResampledBytes = bytesToProcess - sourceBytesConverted;
+            EnsureMediaFoundationStarted();
 
-            var headBa = new byte[notResampledBytes];
+            _sourceProvider = new BufferedWaveProvider(_inputFormat, TimeSpan.FromSeconds(5))
+            {
+                DiscardOnBufferOverflow = true,
+                ReadFully = false
+            };
 
-            Buffer.BlockCopy(source, sourceBytesConverted, headBa, 0, notResampledBytes);
+            _resampler = new MediaFoundationResampler(_sourceProvider, _outputFormat)
+            {
+                ResamplerQuality = 60
+            };
 
-            _notResampledHeadChunks.Add(channel, headBa);
-            //Log.Error("We didn't convert everything from {sourceLength} bytes. Only {sourceBytesConverted} bytes converted", source.Length, sourceBytesConverted);
+            _logger.LogDebug("Created MediaFoundationResampler with src: {src} and dst: {dst}", _inputFormat, _outputFormat);
+        }
+
+        return (_sourceProvider, _resampler);
+    }
+
+    private static void EnsureMediaFoundationStarted()
+    {
+        if (_mediaFoundationStarted)
+        {
+            return;
+        }
+
+        lock (StartupLock)
+        {
+            if (_mediaFoundationStarted)
+            {
+                return;
+            }
+
+            MediaFoundationApi.Startup();
+            _mediaFoundationStarted = true;
         }
     }
 
-    public byte[] ResampleMultiChannelDataSplittingChannels(byte[] sourceAudioData, int channelCount)
+    public void Dispose()
     {
-        byte[][] extractedChannels = ExtractIndividualChannels(sourceAudioData, channelCount, sizeof(short));
-        byte[][] resampledDataPerChannel = new byte[channelCount][];
-        for (int i = 0; i < channelCount; i++)
+        if (_disposed)
         {
-            byte[] res = ResampleRawPcmData(extractedChannels[i], channel: i);
-            if (res == null)
-            {
-                return null;
-            }
-            //var resampledRawData = new byte[resampledBufferSize];
-            //Buffer.BlockCopy(res, 0, resampledRawData, 0, resampledBufferSize);
-            resampledDataPerChannel[i] = res;
+            return;
         }
 
-        return CombineIndividualChannels(resampledDataPerChannel, sizeof(short));
-    }
-
-    private byte[][] ExtractIndividualChannels(byte[] source, int channelCount, int sampleSize)
-    {
-        int eachChannelSize = source.Length / channelCount;
-        int FrameCount = eachChannelSize / sizeof(short);
-
-        var ExtractedChannels = new byte[channelCount][];
-        for (int i = 0; i < channelCount; i++)
-            ExtractedChannels[i] = new byte[eachChannelSize];
-
-        int BytesInEachFrame = channelCount * sampleSize;
-
-        for (int ChannelCounter = 0; ChannelCounter < channelCount; ChannelCounter++)
-        {
-            //Finish One Channel
-            int frameCounter = 0;
-            for (int byteCounter = sizeof(short) * ChannelCounter; frameCounter < FrameCount; byteCounter += BytesInEachFrame)
-            {
-                ExtractedChannels[ChannelCounter][2 * frameCounter] = source[byteCounter];
-                ExtractedChannels[ChannelCounter][2 * frameCounter + 1] = source[byteCounter + 1];
-                frameCounter++;
-            }
-        }
-
-        return ExtractedChannels;
-    }
-
-    private byte[] CombineIndividualChannels(byte[][] channels, int sampleSize)
-    {
-        if (channels == null || channels.Length == 0)
-        {
-            throw new ArgumentException("Channels cannot be null or empty.", nameof(channels));
-        }
-
-        int channelCount = channels.Length;
-        int channelLength = channels[0].Length;
-
-        for (int i = 1; i < channelCount; i++)
-        {
-            if (channels[i].Length != channelLength)
-            {
-                throw new ArgumentException("All channel arrays must have the same length.");
-            }
-        }
-
-        int frameCount = channelLength / sampleSize;
-        int bytesInFrame = channelCount * sampleSize;
-        byte[] combined = new byte[frameCount * bytesInFrame];
-
-        for (int frame = 0; frame < frameCount; frame++)
-        {
-            for (int ch = 0; ch < channelCount; ch++)
-            {
-                int srcIndex = frame * sampleSize;
-                int destIndex = frame * bytesInFrame + ch * sampleSize;
-
-                for (int b = 0; b < sampleSize; b++)
-                {
-                    combined[destIndex + b] = channels[ch][srcIndex + b];
-                }
-            }
-        }
-
-        return combined;
+        _resampler?.Dispose();
+        _resampler = null;
+        _sourceProvider = null;
+        _disposed = true;
     }
 }

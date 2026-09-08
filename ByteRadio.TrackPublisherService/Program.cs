@@ -35,6 +35,8 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        builder.Host.UseSerilog();
+
         builder.Services.AddControllers();
         builder.Services.AddProblemDetails();
 
