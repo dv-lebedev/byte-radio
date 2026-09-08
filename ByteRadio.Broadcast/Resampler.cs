@@ -8,7 +8,7 @@ namespace ByteRadio.Broadcast;
 
 public class Resampler : IDisposable
 {
-    private static readonly object StartupLock = new();
+    private static readonly object _startupLock = new();
     private static bool _mediaFoundationStarted;
 
     private readonly WaveFormat _inputFormat;
@@ -88,7 +88,7 @@ public class Resampler : IDisposable
             return;
         }
 
-        lock (StartupLock)
+        lock (_startupLock)
         {
             if (_mediaFoundationStarted)
             {

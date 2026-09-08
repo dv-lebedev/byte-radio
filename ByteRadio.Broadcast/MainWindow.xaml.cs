@@ -3,9 +3,6 @@ using ByteRadio.Broadcast.ViewModels;
 
 namespace ByteRadio.Broadcast;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel;

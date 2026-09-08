@@ -21,6 +21,8 @@ public sealed class RabbitMqPublisher : IRabbitMqPublisher, IAsyncDisposable
     {
         _optionsProvider = optionsProvider;
         _logger = logger;
+
+        //TODO: Pre-initialize the channel to avoid first publish delay
         _ = GetOrCreateChannelAsync(CancellationToken.None);
     }
 

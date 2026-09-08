@@ -1,7 +1,6 @@
 using ByteRadio.Messaging;
 using ByteRadio.TrackPublisherService.Controllers;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
 using Serilog;
@@ -42,10 +41,10 @@ public class Program
 
         builder.Services.AddSingleton<LiveStreamProviderController>();
         builder.Services.AddSingleton<LiveStreamSourceManager>();
-        //builder.Services.AddTransient<ISensorDataRepository, SensorDataRepository>();
 
         builder.Services.AddSingleton<LocalTestRabbitMqOptionsProvider>();
         builder.Services.AddSingleton<IRabbitMqOptionsProvider>(sp => sp.GetRequiredService<LocalTestRabbitMqOptionsProvider>());
+        
         builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 
         builder.Services.AddHealthChecks()

@@ -72,6 +72,7 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         _sendLoopTask = Task.Run(() => SendLoopAsync(ct), ct);
 
+        //TODO: WasapiLoopbackCapture is obsolete
         _capture = new WasapiLoopbackCapture();
         _capture.DataAvailable += OnDataAvailable;
         _capture.RecordingStopped += OnRecordingStopped;

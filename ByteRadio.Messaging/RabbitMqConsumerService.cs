@@ -87,16 +87,11 @@ public sealed class RabbitMqConsumerService : BackgroundService
             try
             {
                 var data = ea.Body.ToArray();
-
-                //TODO Serilog.Log.Debug("Received message from RabbitMQ queue {QueueName}: {MessageSize} bytes", _options.QueueName, data.Length);
-
                 await _broadcaster.BroadcastAsync(data, stoppingToken);
-                //await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing message from queue {QueueName}.", _options.QueueName);
-                await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false, cancellationToken: stoppingToken);
             }
         };
 
