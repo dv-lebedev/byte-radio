@@ -38,11 +38,7 @@ public class Program
             options.ConfigureEndpointDefaults(listenOptions =>
             {
                 listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-
             });
-
-            //TODO
-            //options.ConfigureEndpointDefaults(lo => lo.Protocols = HttpProtocols.Http1AndHttp2);
         });
 
         builder.Services.AddControllers();
@@ -118,7 +114,6 @@ public class Program
             Predicate = check => check.Tags.Contains("live")
         });
 
-        app.MapGet("/", () => Results.Ok());
         app.Run();
     }
 

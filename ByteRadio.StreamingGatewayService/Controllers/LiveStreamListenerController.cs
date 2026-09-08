@@ -28,7 +28,14 @@ public class LiveStreamListenerController : ControllerBase
 
         WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
         var connectionId = _connectionManager.AddSocket(webSocket);
+        await WaitForCloseAsync(webSocket, connectionId);
 
+        webSocket.Dispose();
+        return new EmptyResult();
+    }
+
+    private async Task WaitForCloseAsync(WebSocket webSocket, Guid connectionId)
+    {
         try
         {
             var buffer = new byte[1024];
@@ -48,8 +55,5 @@ public class LiveStreamListenerController : ControllerBase
         {
             await _connectionManager.RemoveSocketAsync(connectionId);
         }
-
-        webSocket.Dispose();
-        return new EmptyResult();
     }
 }

@@ -40,7 +40,7 @@ public class WebSocketConnectionManager : IMessageBroadcaster
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Error closing WebSocket {ConnectionId} during removal.", id);
+            _logger.LogError(ex, "Error closing WebSocket {ConnectionId} during removal.", id);
         }
         finally
         {
