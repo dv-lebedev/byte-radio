@@ -88,7 +88,7 @@ public sealed class RabbitMqConsumerService : BackgroundService
                 //TODO Serilog.Log.Debug("Received message from RabbitMQ queue {QueueName}: {MessageSize} bytes", _options.QueueName, data.Length);
 
                 await _connectionManager.BroadcastAsync(data, stoppingToken);
-                await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
+                //await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
             }
             catch (Exception ex)
             {
@@ -99,7 +99,7 @@ public sealed class RabbitMqConsumerService : BackgroundService
 
         await _channel.BasicConsumeAsync(
             queue: _options.QueueName,
-            autoAck: false,
+            autoAck: true,
             consumer: consumer,
             cancellationToken: stoppingToken);
 
