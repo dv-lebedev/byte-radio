@@ -39,9 +39,6 @@ public class LiveStreamListenerController : ControllerBase
                 result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), HttpContext.RequestAborted);
             }
             while (result.MessageType != WebSocketMessageType.Close);
-
-            await Task.Delay(Timeout.Infinite);
-
         }
         catch (Exception ex)
         {

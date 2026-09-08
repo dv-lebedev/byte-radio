@@ -69,7 +69,7 @@ public class Program
 
         builder.Services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "MockService", Version = "v1" });
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "StreamingGatewayService", Version = "v1" });
         });
 
         var app = builder.Build();
@@ -95,7 +95,7 @@ public class Program
         });
 
         app.UseSwagger();
-        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MockService v1"));
+        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "StreamingGatewayService v1"));
 
         app.UseHttpsRedirection();
 
@@ -117,17 +117,6 @@ public class Program
         });
 
         app.MapGet("/", () => Results.Ok());
-        app.MapGet("/shutdown", (IHostApplicationLifetime lifetime) =>
-        {
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(5000);
-                lifetime.StopApplication();
-            });
-
-            return Results.Ok("Shutting down...");
-        });
-
         app.Run();
     }
 
