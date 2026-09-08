@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>ByteRadio Live Player</title>
+    <style>
+        body { font-family: sans-serif; background: #111; color: #eee; display: flex; flex-direction: column; align-items: center; padding-top: 60px; }
+        button { font-size: 1.2rem; padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; }
+        #startBtn { background: #4caf50; color: white; }
+        #stopBtn { background: #e53935; color: white; }
+        #status { margin-top: 20px; font-size: 1rem; color: #9e9e9e; }
+    </style>
+</head>
+<body>
+    <h1>ByteRadio Live Player</h1>
+    <div>
+        <button id="startBtn">Play</button>
+        <button id="stopBtn" disabled>Stop</button>
+    </div>
+    <div id="status">Idle</div>
+
+    <script>
+        const SAMPLE_RATE = 48000;
+        const CHANNELS = 2;
+        const BYTES_PER_SAMPLE = 4; // 32-bit IEEE float PCM
+
+        let audioContext = null;
+        let webSocket = null;
+        let nextStartTime = 0;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusEl = document.getElementById('status');
+
+        function setStatus(text) {
+            statusEl.textContent = text;
+        }
+
+        function pcm32FloatToAudioBuffer(arrayBuffer) {
+            const dataView = new DataView(arrayBuffer);
+            const sampleCount = arrayBuffer.byteLength / BYTES_PER_SAMPLE / CHANNELS;
+
+            const audioBuffer = audioContext.createBuffer(CHANNELS, sampleCount, SAMPLE_RATE);
+
+            for (let channel = 0; channel < CHANNELS; channel++) {
+                const channelData = audioBuffer.getChannelData(channel);
+                for (let i = 0; i < sampleCount; i++) {
+                    const offset = (i * CHANNELS + channel) * BYTES_PER_SAMPLE;
+                    channelData[i] = dataView.getFloat32(offset, true); // little-endian
+                }
+            }
+
+            return audioBuffer;
+        }
+
+        function scheduleBuffer(audioBuffer) {
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+            if (nextStartTime < now) {
+                nextStartTime = now;
+            }
+
+            source.start(nextStartTime);
+            nextStartTime += audioBuffer.duration;
+        }
+
+        function connect() {
+
+            const url = `wss://192.168.1.7:5011/LiveStreamListener/connect`;
+
+            webSocket = new WebSocket(url);
+            webSocket.binaryType = 'arraybuffer';
+
+            webSocket.onopen = () => setStatus('Connected. Buffering audio...');
+
+            webSocket.onmessage = (event) => {
+                if (!(event.data instanceof ArrayBuffer) || event.data.byteLength === 0) {
+                    return;
+                }
+
+                try {
+                    const audioBuffer = pcm32FloatToAudioBuffer(event.data);
+                    scheduleBuffer(audioBuffer);
+                    setStatus('Playing...');
+                } catch (err) {
+                    console.error('Failed to decode/play audio chunk', err);
+                }
+            };
+
+            webSocket.onerror = (err) => {
+                console.error('WebSocket error', err);
+                setStatus('Connection error');
+            };
+
+            webSocket.onclose = () => {
+                setStatus('Disconnected');
+                stopPlayback();
+            };
+        }
+
+        function startPlayback() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+            nextStartTime = 0;
+
+            connect();
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+        }
+
+        function stopPlayback() {
+            if (webSocket) {
+                webSocket.onclose = null;
+                webSocket.close();
+                webSocket = null;
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            setStatus('Idle');
+        }
+
+        startBtn.addEventListener('click', startPlayback);
+        stopBtn.addEventListener('click', stopPlayback);
+    </script>
+</body>
+</html>

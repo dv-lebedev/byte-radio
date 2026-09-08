@@ -1,6 +1,0 @@
-@ByteRadio.StreamingGatewayService_HostAddress = http://localhost:5263
-
-GET {{ByteRadio.StreamingGatewayService_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

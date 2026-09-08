@@ -1,3 +1,4 @@
+using ByteRadio.LiveStreamIngestService.Messaging;
 using ByteRadio.TrackPublisherService.Controllers;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -38,7 +39,11 @@ public class Program
         builder.Services.AddProblemDetails();
 
         builder.Services.AddSingleton<LiveStreamProviderController>();
+        builder.Services.AddSingleton<LiveStreamSourceManager>();
         //builder.Services.AddTransient<ISensorDataRepository, SensorDataRepository>();
+
+        builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
+        builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 
         builder.Services.AddHealthChecks()
             .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" });
@@ -74,6 +79,9 @@ public class Program
         app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MockService v1"));
 
         app.UseHttpsRedirection();
+
+        app.UseWebSockets();
+
         app.UseAuthorization();
 
         app.MapControllers();

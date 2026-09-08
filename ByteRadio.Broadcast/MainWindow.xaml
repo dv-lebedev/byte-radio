@@ -1,0 +1,31 @@
+﻿<Window x:Class="ByteRadio.Broadcast.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ByteRadio.Broadcast"
+        mc:Ignorable="d"
+        Title="ByteRadio Broadcast" Height="220" Width="480">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="Ingest WebSocket URL:" VerticalAlignment="Center" Width="150"/>
+            <TextBox x:Name="UrlTextBox" Width="280" Text="ws://localhost:5000/LiveStreamProvider/connect"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <Button x:Name="StartButton" Content="Start Broadcast" Width="120" Click="StartButton_Click"/>
+            <Button x:Name="StopButton" Content="Stop Broadcast" Width="120" Margin="12,0,0,0" Click="StopButton_Click" IsEnabled="False"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="2" x:Name="StatusTextBlock" Text="Idle" FontWeight="Bold" Margin="0,0,0,12"/>
+
+        <TextBlock Grid.Row="3" x:Name="ErrorTextBlock" Foreground="Red" TextWrapping="Wrap"/>
+    </Grid>
+</Window>
