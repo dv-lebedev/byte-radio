@@ -104,9 +104,12 @@ public class Program
 
         Log.Logger = new LoggerConfiguration()
             .Enrich.FromLogContext()
-            .MinimumLevel.Verbose()
-            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] [s:{SessionId}][m:{MeetId}][p:{SpeakerId}] {Message:lj}{NewLine}{Exception}")
             .MinimumLevel.Debug()
+            .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
+            .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] [s:{SessionId}][m:{MeetId}][p:{SpeakerId}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
     }
 
