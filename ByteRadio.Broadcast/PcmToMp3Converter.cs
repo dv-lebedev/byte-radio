@@ -1,10 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NAudio.Lame;
 using NAudio.Wave;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace ByteRadio.Broadcast;
 
@@ -13,7 +10,7 @@ public class PcmToMp3Converter : IDisposable
     private readonly LameMP3FileWriter _writer;
     private readonly MemoryStream _ms;
 
-    public PcmToMp3Converter(WaveFormat waveFormat, ILogger<PcmToMp3Converter> logger)
+    public PcmToMp3Converter(WaveFormat waveFormat)
     {
         _ms = new MemoryStream();
         _writer = new LameMP3FileWriter(_ms, waveFormat, LAMEPreset.ABR_320);

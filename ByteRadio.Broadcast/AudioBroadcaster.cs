@@ -76,7 +76,7 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         _capture.DataAvailable += OnDataAvailable;
         _capture.RecordingStopped += OnRecordingStopped;
 
-        _pcmToMp3Converter = new PcmToMp3Converter(_capture.WaveFormat, _loggerFactory.CreateLogger<PcmToMp3Converter>());
+        _pcmToMp3Converter = new PcmToMp3Converter(_capture.WaveFormat);
         _converterLoopTask = Task.Run(() => ConverterLoopAsync(ct), ct);
 
         _capture.StartRecording();
