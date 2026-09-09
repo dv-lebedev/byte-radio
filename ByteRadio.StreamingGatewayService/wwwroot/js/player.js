@@ -29,8 +29,10 @@ function appendNextChunk() {
 
 function connect() {
 
-    // TODO: Replace with your actual WebSocket server URL
-    const url = `wss://192.168.1.7:5011/LiveStreamListener/connect`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const url = `${protocol}//${host}/LiveStreamListener/connect`;
+    console.log('Connecting to WebSocket at', url);
 
     webSocket = new WebSocket(url);
     webSocket.binaryType = 'arraybuffer';
@@ -43,6 +45,7 @@ function connect() {
         }
 
         pendingChunks.push(event.data);
+
         appendNextChunk();
         setStatus('Playing...');
     };
@@ -53,6 +56,7 @@ function connect() {
     };
 
     webSocket.onclose = () => {
+        console.log('WebSocket closed');
         setStatus('Disconnected');
         stopPlayback();
     };
