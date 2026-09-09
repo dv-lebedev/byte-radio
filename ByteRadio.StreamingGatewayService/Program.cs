@@ -44,6 +44,7 @@ public class Program
         });
 
         builder.Services.AddControllers();
+        builder.Services.AddMvc();
         builder.Services.AddProblemDetails();
 
         builder.Services.AddSingleton<WebSocketConnectionManager>();
@@ -73,6 +74,8 @@ public class Program
         });
 
         var app = builder.Build();
+
+        app.UseStaticFiles();
 
         app.UseExceptionHandler(exceptionHandlerApp =>
         {

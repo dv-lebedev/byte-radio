@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using NAudio.Lame;
+﻿using NAudio.Lame;
 using NAudio.Wave;
 using System.IO;
 

@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Byte Radio Live</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+
+    <script src="~/js/player.js" defer></script>
+    <script src="~/js/hex-animations.js" defer></script>
+
+    <link rel="stylesheet" href="~/css/styles.css">
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="hero">
+            <div class="hex-bg" id="hexBg"></div>
+            <h1>Byte Radio <span class="live">Live</span></h1>
+            <p>320 kbps · streaming via WebSocket</p>
+        </div>
+
+        <div class="player-controls">
+            <button id="playPauseBtn">Play</button>
+            <div id="status">[READY]</div>
+        </div>
+
+        <audio id="player" autoplay></audio>
+    </div>
+</body>
+</html>
