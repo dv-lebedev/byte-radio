@@ -1,4 +1,5 @@
 ﻿using ByteRadio.Broadcast.ViewModels;
+using ByteRadio.Broadcast.Views;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using System.Windows;
@@ -7,6 +8,8 @@ namespace ByteRadio.Broadcast;
 
 public partial class App : Application
 {
+    private MainWindowViewModel? _viewModel;
+
     public static ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -22,13 +25,16 @@ public partial class App : Application
         base.OnStartup(e);
 
         var broadcaster = new AudioBroadcaster(LoggerFactory);
-        var viewModel = new MainWindowViewModel(broadcaster);
-        var mainWindow = new MainWindow(viewModel);
+        _viewModel = new MainWindowViewModel(broadcaster);
+        var view = new MainView(_viewModel);
+        var mainWindow = new MainWindow();
+        mainWindow.Content = view;
         mainWindow.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _ = _viewModel?.DisposeAsync();
         Log.CloseAndFlush();
         base.OnExit(e);
     }
