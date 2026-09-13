@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace ByteRadio.Broadcast.Converters;
+namespace ByteRadio.Broadcast.WpfClient.Converters;
 
 public sealed class InverseBooleanConverter : IValueConverter
 {

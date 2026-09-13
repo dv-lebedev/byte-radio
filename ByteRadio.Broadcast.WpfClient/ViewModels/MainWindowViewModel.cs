@@ -1,11 +1,11 @@
 using System.Windows;
 using System.Windows.Threading;
-using ByteRadio.Broadcast.Models;
+using ByteRadio.Broadcast.WpfClient.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Serilog;
 
-namespace ByteRadio.Broadcast.ViewModels;
+namespace ByteRadio.Broadcast.WpfClient.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IAsyncDisposable
 {

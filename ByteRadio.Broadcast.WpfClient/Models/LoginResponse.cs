@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ByteRadio.Broadcast.Models;
+namespace ByteRadio.Broadcast.WpfClient.Models;
 
 public class LoginResponse
 {

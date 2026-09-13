@@ -1,8 +1,8 @@
 <Solution>
   <Folder Name="/Solution Items/" />
-  <Project Path="ByteRadio.Broadcast/ByteRadio.Broadcast.csproj" />
   <Project Path="ByteRadio.Messaging/ByteRadio.Messaging.csproj" />
   <Project Path="ByteRadio.StreamingGatewayService/ByteRadio.StreamingGatewayService.csproj" />
+  <Project Path="ByteRadio.Broadcast.WpfClient/ByteRadio.Broadcast.WpfClient.csproj" />
   <Project Path="ByteRadio.LiveStreamIngestService/ByteRadio.LiveStreamIngestService.csproj" />
 </Solution>
 

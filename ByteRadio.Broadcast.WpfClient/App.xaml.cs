@@ -1,14 +1,14 @@
-﻿using ByteRadio.Broadcast.Infrastructure;
-using ByteRadio.Broadcast.Models;
-using ByteRadio.Broadcast.ViewModels;
-using ByteRadio.Broadcast.Views;
+﻿using ByteRadio.Broadcast.WpfClient.Infrastructure;
+using ByteRadio.Broadcast.WpfClient.Models;
+using ByteRadio.Broadcast.WpfClient.ViewModels;
+using ByteRadio.Broadcast.WpfClient.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Windows;
 
-namespace ByteRadio.Broadcast;
+namespace ByteRadio.Broadcast.WpfClient;
 
 public partial class App : Application
 {

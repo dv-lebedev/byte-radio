@@ -1,9 +1,9 @@
-﻿using ByteRadio.Broadcast.Infrastructure;
+﻿using ByteRadio.Broadcast.WpfClient.Infrastructure;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace ByteRadio.Broadcast.Models;
+namespace ByteRadio.Broadcast.WpfClient.Models;
 
 public class AuthApiClient
 {

@@ -1,11 +1,11 @@
-using ByteRadio.Broadcast.Infrastructure;
-using ByteRadio.Broadcast.Utils;
+using ByteRadio.Broadcast.WpfClient.Infrastructure;
+using ByteRadio.Broadcast.WpfClient.Utils;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
 using System.Net.WebSockets;
 using System.Threading.Channels;
 
-namespace ByteRadio.Broadcast.Models;
+namespace ByteRadio.Broadcast.WpfClient.Models;
 
 public sealed class AudioBroadcaster : IAsyncDisposable
 {

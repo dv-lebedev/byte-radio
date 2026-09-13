@@ -1,13 +1,11 @@
-﻿using ByteRadio.Broadcast.ViewModels;
+﻿using ByteRadio.Broadcast.WpfClient.ViewModels;
 using Microsoft.Extensions.Logging;
-using Serilog;
-using Serilog.Core;
 using System.Security;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace ByteRadio.Broadcast.Views;
+namespace ByteRadio.Broadcast.WpfClient.Views;
 
 public partial class LoginView : UserControl
 {

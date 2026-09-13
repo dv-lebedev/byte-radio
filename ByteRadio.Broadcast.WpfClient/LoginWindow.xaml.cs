@@ -1,8 +1,8 @@
-﻿using ByteRadio.Broadcast.ViewModels;
-using ByteRadio.Broadcast.Views;
+﻿using ByteRadio.Broadcast.WpfClient.ViewModels;
+using ByteRadio.Broadcast.WpfClient.Views;
 using System.Windows;
 
-namespace ByteRadio.Broadcast
+namespace ByteRadio.Broadcast.WpfClient
 {
     public partial class LoginWindow : Window
     {

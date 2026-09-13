@@ -1,12 +1,12 @@
-﻿using ByteRadio.Broadcast.Infrastructure;
-using ByteRadio.Broadcast.Models;
+﻿using ByteRadio.Broadcast.WpfClient.Infrastructure;
+using ByteRadio.Broadcast.WpfClient.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Security;
 
-namespace ByteRadio.Broadcast.ViewModels;
+namespace ByteRadio.Broadcast.WpfClient.ViewModels;
 
 public partial class LoginViewModel : ObservableObject
 {

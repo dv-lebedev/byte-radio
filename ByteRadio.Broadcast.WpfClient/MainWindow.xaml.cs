@@ -1,7 +1,7 @@
 ﻿using System.Windows;
-using ByteRadio.Broadcast.Views;
+using ByteRadio.Broadcast.WpfClient.Views;
 
-namespace ByteRadio.Broadcast;
+namespace ByteRadio.Broadcast.WpfClient;
 
 public partial class MainWindow : Window
 {

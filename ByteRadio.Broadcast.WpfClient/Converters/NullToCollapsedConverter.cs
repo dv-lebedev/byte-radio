@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Data;
 
-namespace ByteRadio.Broadcast.Converters;
+namespace ByteRadio.Broadcast.WpfClient.Converters;
 
 public class NullToCollapsedConverter : IValueConverter
 {

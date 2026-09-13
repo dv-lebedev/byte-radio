@@ -1,4 +1,4 @@
-﻿namespace ByteRadio.Broadcast.Infrastructure;
+﻿namespace ByteRadio.Broadcast.WpfClient.Infrastructure;
 
 internal class SessionData : ISessionData
 {
