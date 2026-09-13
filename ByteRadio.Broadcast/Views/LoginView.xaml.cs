@@ -68,7 +68,7 @@ public partial class LoginView : UserControl
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to clear password box after login success.");
+            _logger.LogWarning(ex, "Failed to clear password box after login success.");
         }
     }
 }
