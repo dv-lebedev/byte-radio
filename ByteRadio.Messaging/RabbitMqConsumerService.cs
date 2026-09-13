@@ -112,18 +112,18 @@ public sealed class RabbitMqConsumerService : BackgroundService
         {
             _channel?.Dispose();
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore errors while cleaning up a broken channel
+            _logger.LogWarning(ex, "Error while disposing RabbitMQ channel during cleanup.");
         }
 
         try
         {
             _connection?.Dispose();
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore errors while cleaning up a broken connection
+            _logger.LogWarning(ex, "Error while disposing RabbitMQ connection during cleanup.");
         }
 
         _channel = null;

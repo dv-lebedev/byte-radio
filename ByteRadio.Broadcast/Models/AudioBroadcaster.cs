@@ -12,9 +12,9 @@ public sealed class AudioBroadcaster : IAsyncDisposable
     private readonly ILogger<AudioBroadcaster> _logger;
     private readonly ISessionData _sessionData;
     private readonly Uri _webSocketUrl;
+
     private Channel<byte[]>? _rawQueue;
     private Channel<byte[]>? _sendQueue;
-
     private WasapiLoopbackCapture? _capture;
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _cts;
