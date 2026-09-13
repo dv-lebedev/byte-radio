@@ -69,6 +69,10 @@ public class LiveStreamSourceItem : IDisposable
             {
                 _logger.LogError(ex, "Error occurred while reading from the channel.");
             }
+            finally
+            {
+                _logger.LogDebug("Sending to RabbitMQ loop finished.");
+            }
         });
 
         try

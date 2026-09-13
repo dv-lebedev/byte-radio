@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -13,14 +12,11 @@ public class MockAuthService : IAuthService
         { "test", "test" },
     };
 
-    private readonly string _jwtKey;
-    private const string Issuer = "MyApi";
-    private const string Audience = "MyClient";
+    private readonly IConfiguration _config;
 
     public MockAuthService(IConfiguration config)
     {
-        _jwtKey = config["Jwt:Key"]
-               ?? "supersecretkeythatmustbeatleast32characterslong!";
+        _config = config;
     }
 
     public AuthResult Authenticate(string username, string password)
@@ -34,13 +30,17 @@ public class MockAuthService : IAuthService
             new Claim(ClaimTypes.Role, "User")
         };
 
+        var jwtKey = _config["Jwt:Key"] ?? "supersecretkeythatmustbeatleast32characterslong!";
+        var jwtIssuer = _config["Jwt:Issuer"] ?? "ByteRadioApi";
+        var jwtAudience = _config["Jwt:Audience"] ?? "ByteRadioClient";
+
         var creds = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey)),
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: Issuer,
-            audience: Audience,
+            issuer: jwtIssuer,
+            audience: jwtAudience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(15),
             signingCredentials: creds);

@@ -1,6 +1,6 @@
+using ByteRadio.LiveStreamIngestService.Controllers;
 using ByteRadio.LiveStreamIngestService.Services;
 using ByteRadio.Messaging;
-using ByteRadio.TrackPublisherService.Controllers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -8,7 +8,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using System.Diagnostics;
-using System.Security.Claims;
 using System.Text;
 
 namespace ByteRadio.LiveStreamIngestService;
@@ -62,10 +61,9 @@ public class Program
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "LiveStreamIngestService", Version = "v1" });
         });
 
-        // JWT
         var jwtKey = builder.Configuration["Jwt:Key"] ?? "supersecretkeythatmustbeatleast32characterslong!";
-        var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MyApi";
-        var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MyClient";
+        var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "ByteRadioApi";
+        var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "ByteRadioClient";
 
         builder.Services.AddAuthentication(options =>
         {
@@ -156,4 +154,3 @@ public class Program
         Log.CloseAndFlush();
     }
 }
-
