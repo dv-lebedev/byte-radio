@@ -5,7 +5,6 @@ namespace ByteRadio.Broadcast.Infrastructure;
 public interface IApiRouter
 {
     Uri Login { get; }
-    Uri Profile { get; }
     Uri WebSocket { get; }
 }
 
@@ -21,7 +20,6 @@ public class ApiRouter : IApiRouter
     private Uri Combine(string baseUri, string path) => new(new Uri(baseUri), path);
 
     public Uri Login => Combine(_cfg.BaseHttp, _cfg.Endpoints.Login);
-    public Uri Profile => Combine(_cfg.BaseHttp, _cfg.Endpoints.Profile);
     public Uri WebSocket
     {
         get

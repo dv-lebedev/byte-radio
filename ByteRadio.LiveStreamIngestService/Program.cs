@@ -138,13 +138,6 @@ public class Program
 
         app.MapGet("/", () => Results.Ok());
 
-        app.MapGet("/api/profile", (ClaimsPrincipal user) =>
-        {
-            var name = user.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
-            return Results.Ok(new { User = name });
-        })
-.RequireAuthorization();
-
         app.Run();
     }
 
