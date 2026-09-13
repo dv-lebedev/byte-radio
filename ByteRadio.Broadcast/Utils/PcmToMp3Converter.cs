@@ -2,7 +2,7 @@
 using NAudio.Wave;
 using System.IO;
 
-namespace ByteRadio.Broadcast;
+namespace ByteRadio.Broadcast.Utils;
 
 public class PcmToMp3Converter : IDisposable
 {

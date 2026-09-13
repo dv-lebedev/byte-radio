@@ -1,13 +1,14 @@
+using ByteRadio.Broadcast.Utils;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
 using System.Net.WebSockets;
 using System.Threading.Channels;
 
-namespace ByteRadio.Broadcast;
+namespace ByteRadio.Broadcast.Models;
 
 public sealed class AudioBroadcaster : IAsyncDisposable
 {
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<AudioBroadcaster> _logger;
 
     private Channel<byte[]> _rawQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
     {
@@ -36,9 +37,9 @@ public sealed class AudioBroadcaster : IAsyncDisposable
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<Exception>? ErrorOccurred;
 
-    public AudioBroadcaster(ILoggerFactory loggerFactory)
+    public AudioBroadcaster(ILogger<AudioBroadcaster> logger)
     {
-        _loggerFactory = loggerFactory;
+        _logger = logger;
     }
 
     public async Task StartAsync(string webSocketUrl, CancellationToken cancellationToken = default)
@@ -65,8 +66,12 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         _webSocket = new ClientWebSocket();
 
+        _logger.LogDebug("AudioBroadcast for {url}: starting...", webSocketUrl);
         RaiseStatus("Connecting...");
+
         await _webSocket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
+
+        _logger.LogDebug("AudioBroadcast: connected");
         RaiseStatus("Connected");
 
         _sendLoopTask = Task.Run(() => SendLoopAsync(ct), ct);
@@ -82,6 +87,7 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         _capture.StartRecording();
 
         IsRunning = true;
+        _logger.LogDebug("Capturing system audio");
         RaiseStatus("Capturing system audio");
     }
 
@@ -106,9 +112,10 @@ public sealed class AudioBroadcaster : IAsyncDisposable
             {
                 await _converterLoopTask;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
             {
-                // expected on stop
+                _logger.LogError(ex, "Error await _converterLoopTask");
             }
         }
 
@@ -118,9 +125,10 @@ public sealed class AudioBroadcaster : IAsyncDisposable
             {
                 await _sendLoopTask;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
             {
-                // expected on stop
+                _logger.LogError(ex, "Error await _sendLoopTask");
             }
         }
 
@@ -132,6 +140,7 @@ public sealed class AudioBroadcaster : IAsyncDisposable
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error while closing socket in AudioBroadcaster");
                 ErrorOccurred?.Invoke(this, ex);
             }
         }
@@ -149,6 +158,7 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         _cts?.Dispose();
         _cts = null;
 
+        _logger.LogDebug("AudioBroadcaster: stop");
         RaiseStatus("Stopped");
     }
 
@@ -196,9 +206,10 @@ public sealed class AudioBroadcaster : IAsyncDisposable
                 _sendQueue.Writer.TryWrite(data);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            // expected on stop
+            _logger.LogError(ex, $"Error in {nameof(AudioBroadcaster)}.{nameof(ConverterLoopAsync)}");
         }
         finally
         {
@@ -225,26 +236,21 @@ public sealed class AudioBroadcaster : IAsyncDisposable
                     continue;
                 }
 
-                try
-                {
-                    await _webSocket.SendAsync(
-                        new ArraySegment<byte>(buffer),
-                        WebSocketMessageType.Binary,
-                        endOfMessage: true,
-                        cancellationToken);
+                await _webSocket.SendAsync(
+                    new ArraySegment<byte>(buffer),
+                    WebSocketMessageType.Binary,
+                    endOfMessage: true,
+                    cancellationToken);
 
-                    Interlocked.Add(ref _totalBytesSent, buffer.Length);
-                }
-                catch (Exception ex)
-                {
-                    ErrorOccurred?.Invoke(this, ex);
-                    break;
-                }
+                Interlocked.Add(ref _totalBytesSent, buffer.Length);
+
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            // expected on stop
+            _logger.LogError(ex, $"Error in {nameof(AudioBroadcaster)}.{nameof(SendLoopAsync)}");
+            ErrorOccurred?.Invoke(this, ex);
         }
     }
 

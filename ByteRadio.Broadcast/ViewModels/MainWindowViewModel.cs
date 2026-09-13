@@ -1,13 +1,16 @@
 using System.Windows;
 using System.Windows.Threading;
+using ByteRadio.Broadcast.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Serilog;
 
 namespace ByteRadio.Broadcast.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly AudioBroadcaster _broadcaster;
+    private readonly ILogger _logger;
     private readonly DispatcherTimer _transferTimer;
 
     [ObservableProperty]
@@ -31,8 +34,9 @@ public partial class MainWindowViewModel : ObservableObject, IAsyncDisposable
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     private bool _isStarting;
 
-    public MainWindowViewModel(AudioBroadcaster broadcaster)
+    public MainWindowViewModel(AudioBroadcaster broadcaster, ILogger logger)
     {
+        _logger = logger;
         _broadcaster = broadcaster;
         _broadcaster.StatusChanged += OnStatusChanged;
         _broadcaster.ErrorOccurred += OnErrorOccurred;
@@ -68,6 +72,7 @@ public partial class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception ex)
         {
+            _logger.Error(ex, "Error in StartAsync");
             ErrorMessage = ex.Message;
             Status = "Failed to start";
         }
@@ -86,6 +91,7 @@ public partial class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception ex)
         {
+            _logger.Error(ex, "Error in StopAsync");
             ErrorMessage = ex.Message;
         }
         finally

@@ -1,12 +1,13 @@
 ﻿using System.Windows;
-using ByteRadio.Broadcast.ViewModels;
+using ByteRadio.Broadcast.Views;
 
 namespace ByteRadio.Broadcast;
 
 public partial class MainWindow : Window
 {
-    public MainWindow()
+    public MainWindow(MainView mainView)
     {
         InitializeComponent();
+        Content = mainView;
     }
 }

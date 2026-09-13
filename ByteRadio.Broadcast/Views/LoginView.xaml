@@ -1,0 +1,99 @@
+﻿<UserControl x:Class="ByteRadio.Broadcast.Views.LoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+             xmlns:viewmodels="clr-namespace:ByteRadio.Broadcast.ViewModels" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:converters="clr-namespace:ByteRadio.Broadcast.Converters"
+             Width="420" Height="340"
+             Background="{DynamicResource WindowBackgroundBrush}"
+             Foreground="{DynamicResource PrimaryTextBrush}">
+    <UserControl.Resources>
+        <converters:NullToCollapsedConverter x:Key="NullToCollapsedConverter"/>
+    </UserControl.Resources>
+
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock 
+            Grid.Row="0"
+            Text="Byte Radio Login"
+            FontSize="18"
+            Margin="0,0,0,20"/>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+            
+            <TextBlock 
+                Text="USERNAME"
+                FontSize="10"
+                Margin="0,0,0,4"/>
+            
+            <TextBox 
+                Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                FontFamily="Consolas"
+                FontSize="14"
+                Padding="8,6"/>
+            
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,0,0,12">
+            
+            <TextBlock 
+                Text="PASSWORD"
+                FontSize="10"
+                Margin="0,0,0,4"/>
+            
+            <PasswordBox 
+                x:Name="PasswordBox"
+                FontSize="14"
+                Padding="8,6"/>
+            
+        </StackPanel>
+
+        <Button 
+            Grid.Row="3"
+            Content="LOGIN"
+            Command="{Binding LoginCommand}"
+            FontSize="12"
+            BorderThickness="0"
+            Padding="20,10"
+            HorizontalAlignment="Left"
+            Margin="0,0,0,16"
+            Cursor="Hand"/>
+
+        <TextBlock 
+            Grid.Row="4"
+            FontFamily="Consolas"
+            FontSize="11"
+            Text="{Binding StatusText}">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+
+                    <Style.Setters>
+                        <Setter Property="Foreground" Value="Transparent"/>
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                    </Style.Setters>
+                    
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                            <Setter Property="Foreground" Value="Orange"/>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+
+                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                            <Setter Property="Foreground" Value="#941A1A"/>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
+    </Grid>
+</UserControl>
