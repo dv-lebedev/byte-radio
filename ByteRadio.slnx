@@ -1,7 +1,5 @@
 <Solution>
-  <Folder Name="/Solution Items/">
-    <File Path="init_database.sql" />
-  </Folder>
+  <Folder Name="/Solution Items/" />
   <Project Path="ByteRadio.Broadcast/ByteRadio.Broadcast.csproj" />
   <Project Path="ByteRadio.Messaging/ByteRadio.Messaging.csproj" />
   <Project Path="ByteRadio.StreamingGatewayService/ByteRadio.StreamingGatewayService.csproj" />
