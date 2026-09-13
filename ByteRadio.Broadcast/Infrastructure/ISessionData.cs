@@ -1,4 +1,4 @@
-﻿namespace ByteRadio.Broadcast;
+﻿namespace ByteRadio.Broadcast.Infrastructure;
 
 public interface ISessionData
 {

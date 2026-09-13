@@ -1,10 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
+﻿using ByteRadio.LiveStreamIngestService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace ByteRadio.LiveStreamIngestService.Controllers;
 
@@ -14,50 +10,25 @@ public record LoginRequest(string Username, string Password);
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly string _jwtKey;
-    private readonly string _issuer;
-    private readonly string _audience;
+    private readonly IAuthService _authService;
 
-    public AuthController(IConfiguration config)
+    public AuthController(IConfiguration config, IAuthService authService)
     {
-        _jwtKey = config["Jwt:Key"] ?? "supersecretkeythatmustbeatleast32characterslong!";
-        _issuer = config["Jwt:Issuer"] ?? "MyApi";
-        _audience = config["Jwt:Audience"] ?? "MyClient";
+        _authService = authService;
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     public IActionResult Login([FromBody] LoginRequest request)
     {
-        // Проверка учётных данных (в реальности — по БД)
-        if (request.Username != "admin" || request.Password != "password")
-            return Unauthorized(new { Message = "Invalid credentials" });
+        var result = _authService.Authenticate(request.Username, request.Password);
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.Name, request.Username),
-            new Claim(ClaimTypes.Role, "User")
-        };
-
-        var token = new JwtSecurityToken(
-            issuer: _issuer,
-            audience: _audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(15),
-            signingCredentials: creds
-        );
-
-        var handler = new JwtSecurityTokenHandler();
-        var tokenString = handler.WriteToken(token);
-
-        System.Diagnostics.Debug.WriteLine("auth: >> " + tokenString);
+        if (!result.Success)
+            return Unauthorized(new { Message = result.Error });
 
         return Ok(new
         {
-            AccessToken = tokenString,
+            AccessToken = result.AccessToken,
             TokenType = "Bearer",
             ExpiresIn = 15 * 60
         });

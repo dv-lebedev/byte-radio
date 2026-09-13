@@ -1,3 +1,4 @@
+using ByteRadio.LiveStreamIngestService.Services;
 using ByteRadio.Messaging;
 using ByteRadio.TrackPublisherService.Controllers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -42,6 +43,8 @@ public class Program
 
         builder.Services.AddControllers();
         builder.Services.AddProblemDetails();
+
+        builder.Services.AddSingleton<IAuthService, MockAuthService>();
 
         builder.Services.AddSingleton<LiveStreamProviderController>();
         builder.Services.AddSingleton<LiveStreamSourceManager>();

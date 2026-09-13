@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 
-namespace ByteRadio.Broadcast;
+namespace ByteRadio.Broadcast.Infrastructure;
 
 public interface IApiRouter
 {
