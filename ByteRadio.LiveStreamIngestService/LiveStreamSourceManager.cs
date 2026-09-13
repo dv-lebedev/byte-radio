@@ -26,21 +26,26 @@ public class LiveStreamSourceManager
             _item = newItem;
         }
 
-        oldItem?.Dispose();
+        if (oldItem is not null)
+        {
+            oldItem.Dispose();
+        }
 
         await newItem.RunAsync();
     }
 }
 
-public class LiveStreamSourceItem : IDisposable
+internal class LiveStreamSourceItem : IDisposable
 {
     private readonly WebSocket _webSocket;
     private readonly ILogger _logger;
     private readonly IRabbitMqPublisher _publisher;
     private readonly CancellationTokenSource _cts;
     private readonly CancellationToken _ct;
+    private readonly Channel<byte[]> _channel;
+
     private int _disposed;
-    private readonly Channel<byte[]> _channel;   
+
 
     public LiveStreamSourceItem(WebSocket webSocket, ILogger logger, IRabbitMqPublisher publisher)
     {
@@ -54,27 +59,12 @@ public class LiveStreamSourceItem : IDisposable
 
     public async Task RunAsync()
     {
-        // run sending to rabbitmq loop
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var item in _channel.Reader.ReadAllAsync(_ct))
-                {
-                    await _publisher.PublishAsync(item, _ct);
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while reading from the channel.");
-            }
-            finally
-            {
-                _logger.LogDebug("Sending to RabbitMQ loop finished.");
-            }
-        });
+        _ = Task.Run(() => RunSendingLoopAsync());
+        await RunReceivingLoopAsync();
+    }
 
+    private async Task RunReceivingLoopAsync()
+    {
         try
         {
             while (!_cts.Token.IsCancellationRequested)
@@ -135,6 +125,26 @@ public class LiveStreamSourceItem : IDisposable
             }
             _webSocket.Dispose();
             _logger.LogDebug("Live stream source item run loop finished.");
+        }
+    }
+
+    private async Task RunSendingLoopAsync()
+    {
+        try
+        {
+            await foreach (var item in _channel.Reader.ReadAllAsync(_ct))
+            {
+                await _publisher.PublishAsync(item, _ct);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while reading from the channel.");
+        }
+        finally
+        {
+            _logger.LogDebug("Sending to RabbitMQ loop finished.");
         }
     }
 

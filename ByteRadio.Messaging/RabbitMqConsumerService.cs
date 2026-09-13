@@ -137,13 +137,13 @@ public sealed class RabbitMqConsumerService : BackgroundService
             if (_channel is not null)
             {
                 await _channel.CloseAsync(cancellationToken);
-                _channel.Dispose();
+                await _channel.DisposeAsync();
             }
 
             if (_connection is not null)
             {
                 await _connection.CloseAsync(cancellationToken);
-                _connection.Dispose();
+                await _connection.DisposeAsync();
             }
         }
         catch (Exception ex)
