@@ -4,7 +4,7 @@ namespace ByteRadio.Broadcast.Models;
 
 public class LoginResponse
 {
-    [JsonPropertyName("token")]
+    [JsonPropertyName("accessToken")]
     public string Token { get; set; } = string.Empty;
 
     [JsonPropertyName("error")]

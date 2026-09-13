@@ -22,7 +22,7 @@ public class PcmToMp3Converter : IDisposable
         if (_ms.Length > 0)
         {
             var data = _ms.ToArray();
-            _ms.SetLength(0); // Clear the memory stream for the next write
+            _ms.SetLength(0);
             return data;
         }
 

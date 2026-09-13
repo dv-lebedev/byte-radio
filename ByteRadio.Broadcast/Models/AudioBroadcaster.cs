@@ -9,18 +9,10 @@ namespace ByteRadio.Broadcast.Models;
 public sealed class AudioBroadcaster : IAsyncDisposable
 {
     private readonly ILogger<AudioBroadcaster> _logger;
-
-    private Channel<byte[]> _rawQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
-    {
-        SingleReader = true,
-        SingleWriter = true
-    });
-
-    private Channel<byte[]> _sendQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
-    {
-        SingleReader = true,
-        SingleWriter = true
-    });
+    private readonly ISessionData _sessionData;
+    private readonly Uri _webSocketUrl;
+    private Channel<byte[]>? _rawQueue;
+    private Channel<byte[]>? _sendQueue;
 
     private WasapiLoopbackCapture? _capture;
     private ClientWebSocket? _webSocket;
@@ -31,26 +23,28 @@ public sealed class AudioBroadcaster : IAsyncDisposable
     private PcmToMp3Converter? _pcmToMp3Converter;
 
     public bool IsRunning { get; private set; }
-
     public long TotalBytesSent => Interlocked.Read(ref _totalBytesSent);
 
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<Exception>? ErrorOccurred;
 
-    public AudioBroadcaster(ILogger<AudioBroadcaster> logger)
+    public AudioBroadcaster(ILogger<AudioBroadcaster> logger, ISessionData sessionData, IApiRouter apiRouter)
     {
         _logger = logger;
+        _sessionData = sessionData;
+        _webSocketUrl = apiRouter.WebSocket;
     }
 
-    public async Task StartAsync(string webSocketUrl, CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (IsRunning)
         {
             return;
         }
-
-        _cts = new CancellationTokenSource();
+        
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var ct = _cts.Token;
+
         Interlocked.Exchange(ref _totalBytesSent, 0);
 
         _rawQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
@@ -66,10 +60,11 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         _webSocket = new ClientWebSocket();
 
-        _logger.LogDebug("AudioBroadcast for {url}: starting...", webSocketUrl);
+        _logger.LogDebug("AudioBroadcast for {url}: starting...", _webSocketUrl);
         RaiseStatus("Connecting...");
 
-        await _webSocket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
+        _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {_sessionData.Token}");
+        await _webSocket.ConnectAsync(_webSocketUrl, ct);
 
         _logger.LogDebug("AudioBroadcast: connected");
         RaiseStatus("Connected");
@@ -102,7 +97,8 @@ public sealed class AudioBroadcaster : IAsyncDisposable
 
         _capture?.StopRecording();
 
-        _rawQueue.Writer.TryComplete();
+        _rawQueue?.Writer.TryComplete();
+        _sendQueue?.Writer.TryComplete();
 
         _cts?.Cancel();
 
@@ -188,33 +184,7 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         var buffer = new byte[e.BytesRecorded];
         Buffer.BlockCopy(e.Buffer, 0, buffer, 0, e.BytesRecorded);
 
-        _rawQueue.Writer.TryWrite(buffer);
-    }
-
-    private async Task ConverterLoopAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await foreach (var buffer in _rawQueue.Reader.ReadAllAsync(cancellationToken))
-            {
-                var data = _pcmToMp3Converter?.Convert(buffer) ?? Array.Empty<byte>();
-                if (data.Length == 0)
-                {
-                    continue;
-                }
-
-                _sendQueue.Writer.TryWrite(data);
-            }
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error in {nameof(AudioBroadcaster)}.{nameof(ConverterLoopAsync)}");
-        }
-        finally
-        {
-            _sendQueue.Writer.TryComplete();
-        }
+        _rawQueue?.Writer.TryWrite(buffer);
     }
 
     private void OnRecordingStopped(object? sender, StoppedEventArgs e)
@@ -225,11 +195,39 @@ public sealed class AudioBroadcaster : IAsyncDisposable
         }
     }
 
+    private async Task ConverterLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var buffer in _rawQueue?.Reader.ReadAllAsync(cancellationToken) 
+                ?? AsyncEnumerable.Empty<byte[]>())
+            {
+                var data = _pcmToMp3Converter?.Convert(buffer) ?? [];
+                if (data.Length == 0)
+                {
+                    continue;
+                }
+
+                _sendQueue?.Writer.TryWrite(data);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error in {nameof(AudioBroadcaster)}.{nameof(ConverterLoopAsync)}");
+        }
+        finally
+        {
+            _logger.LogDebug("ConverterLoopAsync: completed");
+        }
+    }
+
     private async Task SendLoopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await foreach (var buffer in _sendQueue.Reader.ReadAllAsync(cancellationToken))
+            await foreach (var buffer in _sendQueue?.Reader.ReadAllAsync(cancellationToken) 
+                ?? AsyncEnumerable.Empty<byte[]>())
             {
                 if (_webSocket is not { State: WebSocketState.Open })
                 {
@@ -243,14 +241,17 @@ public sealed class AudioBroadcaster : IAsyncDisposable
                     cancellationToken);
 
                 Interlocked.Add(ref _totalBytesSent, buffer.Length);
-
             }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error in {nameof(AudioBroadcaster)}.{nameof(SendLoopAsync)}");
+            _logger.LogError(ex, "Unexpected error in SendLoopAsync");
             ErrorOccurred?.Invoke(this, ex);
+        }
+        finally
+        {
+            _logger.LogDebug("SendLoopAsync: completed");
         }
     }
 

@@ -1,4 +1,5 @@
 using ByteRadio.LiveStreamIngestService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.WebSockets;
 
@@ -6,6 +7,7 @@ namespace ByteRadio.TrackPublisherService.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize]
     public class LiveStreamProviderController(
         LiveStreamSourceManager streamSourceManager,
         ILogger<LiveStreamProviderController> logger) : ControllerBase

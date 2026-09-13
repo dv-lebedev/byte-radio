@@ -1,10 +1,14 @@
 using ByteRadio.Messaging;
 using ByteRadio.TrackPublisherService.Controllers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using System.Diagnostics;
+using System.Security.Claims;
+using System.Text;
 
 namespace ByteRadio.LiveStreamIngestService;
 
@@ -55,6 +59,41 @@ public class Program
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "LiveStreamIngestService", Version = "v1" });
         });
 
+        // JWT
+        var jwtKey = builder.Configuration["Jwt:Key"] ?? "supersecretkeythatmustbeatleast32characterslong!";
+        var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MyApi";
+        var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MyClient";
+
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+        builder.Services.AddAuthorization();
+
+
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication.JwtBearer", LogLevel.Debug);
+        builder.Logging.AddFilter("Microsoft.IdentityModel", LogLevel.Debug);
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication.JwtBearer", LogLevel.Debug);
+
+
         var app = builder.Build();
 
         app.UseExceptionHandler(exceptionHandlerApp =>
@@ -84,6 +123,7 @@ public class Program
 
         app.UseWebSockets();
 
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();
@@ -94,6 +134,14 @@ public class Program
         });
 
         app.MapGet("/", () => Results.Ok());
+
+        app.MapGet("/api/profile", (ClaimsPrincipal user) =>
+        {
+            var name = user.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+            return Results.Ok(new { User = name });
+        })
+.RequireAuthorization();
+
         app.Run();
     }
 
@@ -104,10 +152,10 @@ public class Program
         Log.Logger = new LoggerConfiguration()
             .Enrich.FromLogContext()
             .MinimumLevel.Debug()
-            .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
-            .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+            //.MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+            //.MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
+            //.MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
+            //.MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
             .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] [s:{SessionId}][m:{MeetId}][p:{SpeakerId}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
     }

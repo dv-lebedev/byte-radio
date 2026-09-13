@@ -11,6 +11,7 @@ public partial class LoginViewModel : ObservableObject
 {
     private readonly ILogger<LoginViewModel> _logger;
     private readonly AuthApiClient _api;
+    private readonly ISessionData _sessionData;
     private SecureString? _securePassword;
     private CancellationTokenSource? _cts;
 
@@ -27,12 +28,13 @@ public partial class LoginViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasError = false;
 
-    public event Action<string>? OnLoginSuccess;
+    public event EventHandler OnLoginSuccess;
 
-    public LoginViewModel(AuthApiClient api, ILogger<LoginViewModel> logger)
+    public LoginViewModel(AuthApiClient api, ISessionData sessionData, ILogger<LoginViewModel> logger)
     {
         _logger = logger;
         _api = api ?? throw new ArgumentNullException(nameof(api));
+        _sessionData = sessionData ?? throw new ArgumentNullException(nameof(sessionData));
     }
 
     public void UpdatePassword(SecureString password) => _securePassword = password;
@@ -87,7 +89,9 @@ public partial class LoginViewModel : ObservableObject
             {
                 StatusText = "Login completed successfully.";
                 _logger.LogDebug("Login completed successfully.");
-                OnLoginSuccess?.Invoke(result.Token);
+                
+                _sessionData.Token = result.Token;
+                OnLoginSuccess?.Invoke(this, EventArgs.Empty);
             }
             else
             {

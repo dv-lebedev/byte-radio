@@ -6,16 +6,18 @@ namespace ByteRadio.Broadcast.Models;
 
 public class AuthApiClient
 {
-    private readonly HttpClient _http;
+    private readonly IApiRouter _apiRouter;
 
-    public AuthApiClient(HttpClient http) => _http = http;
+    public AuthApiClient(IApiRouter apiRouter)
+    {
+        _apiRouter = apiRouter;
+    }
 
     public async Task<LoginResponse> LoginAsync(string username, string password, CancellationToken ct = default)
     {
-        const string endpoint = "https://localhost:5011/api/auth/login";
-
+        var client = new HttpClient();
         var payload = new { username, password };
-        var response = await _http.PostAsJsonAsync(endpoint, payload, ct);
+        var response = await client.PostAsJsonAsync(_apiRouter.Login, payload, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
 
         if (!response.IsSuccessStatusCode)
@@ -27,6 +29,7 @@ public class AuthApiClient
             };
         }
 
-        return JsonSerializer.Deserialize<LoginResponse>(json) ?? new LoginResponse { Error = "Пустой ответ от сервера" };
+        return JsonSerializer.Deserialize<LoginResponse>(json) 
+            ?? new LoginResponse { Error = "Empty response from server" };
     }
 }

@@ -1,6 +1,7 @@
 ﻿using ByteRadio.Broadcast.Models;
 using ByteRadio.Broadcast.ViewModels;
 using ByteRadio.Broadcast.Views;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -24,9 +25,19 @@ public partial class App : Application
                       .WriteTo.Console(outputTemplate: template)
                       .WriteTo.Debug(outputTemplate: template);
                })
+               .ConfigureAppConfiguration((ctx, config) =>
+               {
+                   config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+               })
                .ConfigureServices((ctx, services) =>
                {
-                   services.AddSingleton<AuthApiClient>(c => new AuthApiClient(new System.Net.Http.HttpClient()));
+                   services.Configure<ApiSettings>(ctx.Configuration.GetSection("Api"));
+
+                   services.AddSingleton<IApiRouter, ApiRouter>();
+
+                   services.AddSingleton<ISessionData, SessionData>();
+
+                   services.AddSingleton<AuthApiClient>();
                    services.AddSingleton<AudioBroadcaster>();
 
                    services.AddSingleton<MainWindowViewModel>();
@@ -47,16 +58,8 @@ public partial class App : Application
 
         var services = _host.Services;
 
-        // HttpClient для API
-        //services.AddHttpClient<AuthApiClient>(client =>
-        //{
-        //    // Базовый URL можно задать тут
-        //    client.BaseAddress = new System.Uri("https://localhost:5011/");
-        //    client.Timeout = TimeSpan.FromSeconds(15);
-        //});
-
         var vm = services.GetRequiredService<LoginViewModel>();
-        vm.OnLoginSuccess += token =>
+        vm.OnLoginSuccess += (_, __) =>
         {
             var mainWindow = services.GetRequiredService<MainWindow>();
             mainWindow.Show();

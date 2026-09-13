@@ -15,7 +15,7 @@ public partial class LoginView : UserControl
         _vm = vm;
         DataContext = _vm;
         PasswordBox.PasswordChanged += OnPasswordChanged;
-        _vm.OnLoginSuccess += (_) =>
+        _vm.OnLoginSuccess += (_, __) =>
         {
             PasswordBox.Clear();
             PasswordBox.SecurePassword.Dispose();

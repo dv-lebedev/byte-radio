@@ -14,9 +14,6 @@ public partial class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private readonly DispatcherTimer _transferTimer;
 
     [ObservableProperty]
-    private string _url = "ws://localhost:5000/LiveStreamProvider/connect"; // TODO: Make this configurable
-
-    [ObservableProperty]
     private string _status = "Idle";
 
     [ObservableProperty]
@@ -66,7 +63,7 @@ public partial class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         try
         {
-            await _broadcaster.StartAsync(Url);
+            await _broadcaster.StartAsync();
             IsRunning = true;
             _transferTimer.Start();
         }

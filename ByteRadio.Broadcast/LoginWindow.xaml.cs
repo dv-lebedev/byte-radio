@@ -10,7 +10,7 @@ namespace ByteRadio.Broadcast
         {
             InitializeComponent();
             Content = loginView;
-            loginViewModel.OnLoginSuccess += (_) => this.Close();
+            loginViewModel.OnLoginSuccess += (_, __) => this.Close();
         }
     }
 }
