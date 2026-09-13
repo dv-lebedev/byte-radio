@@ -6,16 +6,16 @@ namespace ByteRadio.Messaging;
 public sealed class RabbitMqPublisher : IRabbitMqPublisher, IAsyncDisposable
 {
     private readonly IRabbitMqOptionsProvider _optionsProvider;
-    private RabbitMqOptions? _options;
     private readonly ILogger<RabbitMqPublisher> _logger;
     private readonly SemaphoreSlim _initLock = new(1, 1);
-
-    private IConnection? _connection;
-    private IChannel? _channel;
     private readonly BasicProperties _properties = new()
     {
         Persistent = true
     };
+
+    private IConnection? _connection;
+    private IChannel? _channel;
+    private RabbitMqOptions? _options;
 
     public RabbitMqPublisher(IRabbitMqOptionsProvider optionsProvider, ILogger<RabbitMqPublisher> logger)
     {
