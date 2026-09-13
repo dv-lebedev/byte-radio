@@ -50,6 +50,7 @@
             
             <PasswordBox 
                 x:Name="PasswordBox"
+                KeyDown="PasswordBox_KeyDown"
                 FontSize="14"
                 Padding="8,6"/>
             

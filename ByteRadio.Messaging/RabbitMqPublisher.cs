@@ -74,7 +74,7 @@ public sealed class RabbitMqPublisher : IRabbitMqPublisher, IAsyncDisposable
                 autoDelete: false,
                 cancellationToken: cancellationToken);
 
-            _logger.LogInformation("RabbitMQ channel established for queue {QueueName}.", _options.QueueName);
+            _logger.LogDebug("RabbitMQ channel established for queue {QueueName}.", _options.QueueName);
 
             return _channel;
         }
